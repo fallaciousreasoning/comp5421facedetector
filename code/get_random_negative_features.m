@@ -33,7 +33,7 @@ function features_neg = get_random_negative_features(non_face_scn_path, feature_
 % rgb2gray
 
 cells_a_template = feature_params.template_size / feature_params.hog_cell_size;
-features_neg = zeros(0, cells_a_template^2 * 31);
+features_neg = zeros(num_samples, cells_a_template^2 * 31);
 
 image_files = dir( fullfile( non_face_scn_path, '*.jpg' ));
 num_images = length(image_files);
@@ -77,12 +77,12 @@ while generated < num_samples
         y = rand_hog_permutation_y(j);
         x = rand_hog_permutation_x(j);
         
-        feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1);
+        feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1,:);
         feature = reshape(feature, 1, []);
         
         %keep track of how many images we've generated
         generated = generated + 1;
-        features_neg = [features_neg; feature];        
+        features_neg(generated) = feature(1);        
     end
 end
 end
