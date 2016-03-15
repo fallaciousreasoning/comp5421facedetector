@@ -45,6 +45,10 @@ test_scenes = dir( fullfile( test_scn_path, '*.jpg' ));
 bboxes = zeros(0,4);
 confidences = zeros(0,1);
 image_ids = cell(0,1);
+   
+min_confidence_threshold = -0.5;
+step_size = 1;
+cells_a_template = feature_params.template_size/feature_params.hog_cell_size;
 
 for i = 1:length(test_scenes)
       
@@ -55,13 +59,38 @@ for i = 1:length(test_scenes)
         img = rgb2gray(img);
     end
     
-    %You can delete all of this below.
-    % Let's create 15 random detections per image
-    cur_x_min = rand(15,1) * size(img,2);
-    cur_y_min = rand(15,1) * size(img,1);
-    cur_bboxes = [cur_x_min, cur_y_min, cur_x_min + rand(15,1) * 50, cur_y_min + rand(15,1) * 50];
-    cur_confidences = rand(15,1) * 4 - 2; %confidences in the range [-2 2]
-    cur_image_ids(1:15,1) = {test_scenes(i).name};
+    %Run the sliding window detector
+    cur_bboxes = zeros(0, 4);
+    cur_confidences = zeros(0, 1); 
+    cur_image_ids = zeros(0, 1);
+    
+    for zoom = 1:1
+        scaled_image = vl_hog(img, feature_params.hog_cell_size);
+        image_size = size(scaled_image);
+        image_width = image_size(2);
+        image_height = image_size(1);
+        
+        x_steps = ceil(image_width / step_size);
+        y_steps = ceil(image_height / step_size);
+        
+        for k = 1:x_steps
+            for l = 1:y_steps
+                x = min(k * step_size, image_width - cells_a_template);
+                y = min(l * step_size, image_height - cells_a_template);
+                
+                window = scaled_image(y:y+cells_a_template - 1, x:x+cells_a_template - 1, :);
+                window = reshape(window, 1, []);
+                confidence = window * w + b;
+                if confidence > min_confidence_threshold
+                    %TODO add it?
+                    bb = [x, y, x + cells_a_template, y + cells_a_template] * feature_params.hog_cell_size;
+                    cur_bboxes = [cur_bboxes; bb];
+                    cur_confidences = [cur_confidences; confidence];
+                    cur_image_ids = [cur_image_ids; {test_scenes(i).name}];
+                end
+            end
+        end
+    end
     
     %non_max_supr_bbox can actually get somewhat slow with thousands of
     %initial detections. You could pre-filter the detections by confidence,
@@ -78,6 +107,7 @@ for i = 1:length(test_scenes)
     bboxes      = [bboxes;      cur_bboxes];
     confidences = [confidences; cur_confidences];
     image_ids   = [image_ids;   cur_image_ids];
+end
 end
 
 
