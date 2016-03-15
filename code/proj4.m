@@ -42,11 +42,14 @@ run('vlfeat/toolbox/vl_setup')
 [~,~,~] = mkdir('visualizations');
 
 data_path = '../data/'; %change if you want to work with a network copy
-positive_folder = 'caltech_faces/Caltech_CropFaces';
-negative_folder = 'train_non_face_scenes';
-num_negative_examples = 10000;%Higher will work strictly better, but you should start with 10000 for debugging
+positive_folder = 'small_positive'; %'caltech_faces/Caltech_CropFaces';
+negative_folder = 'small_negative'; %'train_non_face_scenes';
+hard_negative_folder = 'hard_negatives';
+
+num_negative_examples = 200; %10000;%Higher will work strictly better, but you should start with 10000 for debugging
 
 train_path_pos = fullfile(data_path, positive_folder); %Positive training examples. 36x36 head crops
+hard_negative_path = fullfile(data_path, hard_negative_folder);
 non_face_scn_path = fullfile(data_path, negative_folder); %We can mine random or hard negatives from here
 test_scn_path = fullfile(data_path,'test_scenes/test_jpg'); %CMU+MIT test scenes
 % test_scn_path = fullfile(data_path,'extra_test_scenes'); %Bonus scenes
@@ -151,6 +154,9 @@ imwrite(hog_template_image, 'visualizations/hog_template.png')
 % Don't modify anything in 'evaluate_detections'!
 [gt_ids, gt_bboxes, gt_isclaimed, tp, fp, duplicate_detections] = ...
     evaluate_detections(bboxes, confidences, image_ids, label_path);
+
+%Save all the negatives we encountered
+extract_hard_negatives(hard_negative_path, test_scn_path, image_ids, bboxes, fp);
 
 visualize_detections_by_image(bboxes, confidences, image_ids, tp, fp, test_scn_path, label_path)
 % visualize_detections_by_image_no_gt(bboxes, confidences, image_ids, test_scn_path)
