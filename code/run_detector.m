@@ -46,6 +46,10 @@ bboxes = zeros(0,4);
 confidences = zeros(0,1);
 image_ids = cell(0,1);
    
+%The amount to downscale the image by each iteration. this should be less
+%than 1
+scale_multiplier = 0.7;
+
 min_confidence_threshold = -0.5;
 step_size = 1;
 cells_a_template = feature_params.template_size/feature_params.hog_cell_size;
@@ -55,6 +59,8 @@ for i = 1:length(test_scenes)
     fprintf('Detecting faces in %s\n', test_scenes(i).name)
     img = imread( fullfile( test_scn_path, test_scenes(i).name ));
     img = single(img)/255;
+    img_min_dimension = min(size(img, 1), size(img, 2));
+    
     if(size(img,3) > 1)
         img = rgb2gray(img);
     end
@@ -64,9 +70,11 @@ for i = 1:length(test_scenes)
     cur_confidences = zeros(0, 1); 
     cur_image_ids = zeros(0, 1);
     
-    for zoom = 1:1
-        scaled_image = vl_hog(img, feature_params.hog_cell_size);
-        image_size = size(scaled_image);
+    scale = 1;
+    while floor(scale * img_min_dimension/feature_params.hog_cell_size) > cells_a_template 
+        scaled_image = imresize(img, scale);
+        scaled_hog = vl_hog(scaled_image, feature_params.hog_cell_size);
+        image_size = size(scaled_hog);
         image_width = image_size(2);
         image_height = image_size(1);
         
@@ -78,7 +86,7 @@ for i = 1:length(test_scenes)
                 x = min(k * step_size, image_width - cells_a_template);
                 y = min(l * step_size, image_height - cells_a_template);
                 
-                window = scaled_image(y:y+cells_a_template - 1, x:x+cells_a_template - 1, :);
+                window = scaled_hog(y:y+cells_a_template - 1, x:x+cells_a_template - 1, :);
                 window = reshape(window, 1, []);
                 confidence = window * w + b;
                 if confidence > min_confidence_threshold
@@ -90,6 +98,7 @@ for i = 1:length(test_scenes)
                 end
             end
         end
+        scale = scale * scale_multiplier;
     end
     
     %non_max_supr_bbox can actually get somewhat slow with thousands of
