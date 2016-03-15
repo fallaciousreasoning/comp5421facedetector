@@ -61,22 +61,14 @@ for i = 1:num_images
     hog_size = size(hog);
     hog_height = hog_size(1);
     hog_width = hog_size(2);
+    hog_min_dimension = min(hog_width, hog_height);
     
-    %Get some random x/y points for the hog
+    %Get some ran
     rand_hog_permutation_y = randperm(hog_height-cells_a_template+1);
     rand_hog_permutation_x = randperm(hog_width-cells_a_template+1);
-    min_dimension = min(size(rand_hog_permutation_x, 2), size(rand_hog_permutation_y, 2));
     
     for j = 1:samples_per_image
-        if (j > min_dimension)
-            break
-        end
-        
         y = rand_hog_permutation_y(j);
         x = rand_hog_permutation_x(j);
-        
-        feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1);
-        feature = reshape(feature, 1, []);
-        features_neg = [features_neg, feature];
     end
 end
