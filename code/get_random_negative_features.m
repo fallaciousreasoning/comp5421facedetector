@@ -84,5 +84,6 @@ while generated < num_samples
         generated = generated + 1;
         features_neg(generated) = feature(1);        
     end
+    disp(generated/num_samples);
 end
 end
