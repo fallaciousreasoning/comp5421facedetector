@@ -42,8 +42,12 @@ run('vlfeat/toolbox/vl_setup')
 [~,~,~] = mkdir('visualizations');
 
 data_path = '../data/'; %change if you want to work with a network copy
-train_path_pos = fullfile(data_path, 'caltech_faces/Caltech_CropFaces'); %Positive training examples. 36x36 head crops
-non_face_scn_path = fullfile(data_path, 'train_non_face_scenes'); %We can mine random or hard negatives from here
+positive_folder = 'small_positive';%'caltech_faces/Caltech_CropFaces';
+negative_folder = 'small_negative';%'train_non_face_scenes';
+num_negative_examples = 200;%10000;%Higher will work strictly better, but you should start with 10000 for debugging
+
+train_path_pos = fullfile(data_path, positive_folder); %Positive training examples. 36x36 head crops
+non_face_scn_path = fullfile(data_path, negative_folder); %We can mine random or hard negatives from here
 test_scn_path = fullfile(data_path,'test_scenes/test_jpg'); %CMU+MIT test scenes
 % test_scn_path = fullfile(data_path,'extra_test_scenes'); %Bonus scenes
 label_path = fullfile(data_path,'test_scenes/ground_truth_bboxes.txt'); %the ground truth face locations in the test set
@@ -59,8 +63,6 @@ feature_params = struct('template_size', 36, 'hog_cell_size', 6);
 %YOU CODE 'get_positive_features' and 'get_random_negative_features'
 
 features_pos = get_positive_features( train_path_pos, feature_params );
-
-num_negative_examples = 10000; %Higher will work strictly better, but you should start with 10000 for debugging
 features_neg = get_random_negative_features( non_face_scn_path, feature_params, num_negative_examples);
 
     
@@ -73,8 +75,15 @@ features_neg = get_random_negative_features( non_face_scn_path, feature_params, 
 % work best e.g. 0.0001, but you can try other values
 
 %YOU CODE classifier training. Make sure the outputs are 'w' and 'b'.
-w = rand((feature_params.template_size / feature_params.hog_cell_size)^2 * 31,1); %placeholder, delete
-b = rand(1); %placeholder, delete
+
+%we need the number of positive samples, so we know how many 1's we should
+%output
+y = [-ones(1, num_negative_examples), ones(1, size(features_pos, 1))];
+
+%This should have one column per sample. It should be a 1116xNUM_SAMPLES
+%vector
+x = [transpose(features_neg), transpose(features_pos)];
+[w, b] = vl_svmtrain(x, y, 0.0001) ;
 
 %% step 3. Examine learned classifier
 % You don't need to modify anything in this section. The section first

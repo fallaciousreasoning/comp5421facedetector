@@ -39,13 +39,12 @@ for i = 1:num_images
     image = imread(path);
         
     hog = vl_hog(single(image), feature_params.hog_cell_size);
-    
     hog_size = size(hog);
     hog_height = hog_size(1);
     hog_width = hog_size(2);
     
     feature = reshape(hog, 1, []);
-    features_pos(i) = feature(1);
+    features_pos(i, :) = feature(1, :);
     disp(i/num_images);
 end
 end

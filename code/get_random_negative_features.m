@@ -43,7 +43,7 @@ generated = 0;
 
 while generated < num_samples   
     %Pick a random image
-    image_file =  image_files(uint8(rand(1) * num_images) + 1);
+    image_file =  image_files(floor(rand(1) * num_images + 1));
     
     path = strcat(non_face_scn_path, '/', image_file.name);
     image = rgb2gray(imread(path));
@@ -82,7 +82,7 @@ while generated < num_samples
         
         %keep track of how many images we've generated
         generated = generated + 1;
-        features_neg(generated) = feature(1);        
+        features_neg(generated, :) = feature(1, :);        
     end
     disp(generated/num_samples);
 end
