@@ -39,9 +39,11 @@ image_files = dir( fullfile( non_face_scn_path, '*.jpg' ));
 num_images = length(image_files);
 
 samples_per_image = ceil(num_samples / num_images);
+generated = 0;
 
-for i = 1:num_images   
-    image_file =  image_files(i);
+while generated < num_samples   
+    %Pick a random image
+    image_file =  image_files(uint8(rand(1) * num_images) + 1);
     
     path = strcat(non_face_scn_path, '/', image_file.name);
     image = rgb2gray(imread(path));
@@ -68,7 +70,7 @@ for i = 1:num_images
     min_dimension = min(size(rand_hog_permutation_x, 2), size(rand_hog_permutation_y, 2));
     
     for j = 1:samples_per_image
-        if (j > min_dimension)
+        if (j > min_dimension || generated >= num_samples)
             break
         end
         
@@ -77,6 +79,10 @@ for i = 1:num_images
         
         feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1);
         feature = reshape(feature, 1, []);
-        features_neg = [features_neg, feature];
+        
+        %keep track of how many images we've generated
+        generated = generated + 1;
+        features_neg = [features_neg; feature];        
     end
+end
 end
