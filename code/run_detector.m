@@ -50,12 +50,11 @@ image_ids = cell(0,1);
 %than 1
 scale_multiplier = 0.7;
 
-min_confidence_threshold = -0.5;
-step_size = 1;
-cells_a_template = feature_params.template_size/feature_params.hog_cell_size;
+min_confidence_threshold = 0.1;
+window_size = feature_params.template_size/feature_params.hog_cell_size;
 
 for i = 1:length(test_scenes)
-      
+    count=0;
     fprintf('Detecting faces in %s\n', test_scenes(i).name)
     img = imread( fullfile( test_scn_path, test_scenes(i).name ));
     img = single(img)/255;
@@ -71,34 +70,28 @@ for i = 1:length(test_scenes)
     cur_image_ids = zeros(0, 1);
     
     scale = 1;
-    while floor(scale * img_min_dimension/feature_params.hog_cell_size) > cells_a_template 
+    while floor(scale * img_min_dimension/feature_params.hog_cell_size) > window_size 
         scaled_image = imresize(img, scale);
         scaled_hog = vl_hog(scaled_image, feature_params.hog_cell_size);
-        image_size = size(scaled_hog);
-        image_width = image_size(2);
-        image_height = image_size(1);
+        width = size(scaled_hog, 2);
+        height = size(scaled_hog, 1);
         
-        x_steps = ceil(image_width / step_size);
-        y_steps = ceil(image_height / step_size);
-        
-        for k = 1:x_steps
-            for l = 1:y_steps
-                x = min(k * step_size, image_width - cells_a_template);
-                y = min(l * step_size, image_height - cells_a_template);
+        for x = 1:1:width - window_size + 1
+            for y = 1:1:height - window_size + 1
+                feature = scaled_hog(y:y+ window_size - 1, x:x + window_size - 1, :);
+                score = reshape(feature, 1, [])*w + b;
                 
-                window = scaled_hog(y:y+cells_a_template - 1, x:x+cells_a_template - 1, :);
-                window = reshape(window, 1, []);
-                confidence = window * w + b;
-                if confidence > min_confidence_threshold
-                    %TODO add it?
-                    bb = [x, y, x + cells_a_template, y + cells_a_template] * feature_params.hog_cell_size;
-                    cur_bboxes = [cur_bboxes; bb];
-                    cur_confidences = [cur_confidences; confidence];
+                if score > min_confidence_threshold
+                    bbox = [x, y, x + window_size, y + window_size] * feature_params.hog_cell_size / scale;
+                    
+                    cur_bboxes = [cur_bboxes; bbox];
+                    cur_confidences = [cur_confidences; score];
                     cur_image_ids = [cur_image_ids; {test_scenes(i).name}];
                 end
             end
         end
-        scale = scale * scale_multiplier;
+        
+        scale = scale * scale_multiplier;  
     end
     
     %non_max_supr_bbox can actually get somewhat slow with thousands of

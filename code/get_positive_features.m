@@ -38,7 +38,7 @@ for i = 1:num_images
     path = strcat(train_path_pos, '/', image_files(i).name);
     image = imread(path);
         
-    hog = vl_hog(single(image), feature_params.hog_cell_size);
+    hog = vl_hog(single(image)/255.0, feature_params.hog_cell_size);
     hog_size = size(hog);
     hog_height = hog_size(1);
     hog_width = hog_size(2);

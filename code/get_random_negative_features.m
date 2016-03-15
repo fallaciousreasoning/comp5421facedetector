@@ -39,11 +39,17 @@ image_files = dir( fullfile( non_face_scn_path, '*.jpg' ));
 num_images = length(image_files);
 
 samples_per_image = ceil(num_samples / num_images);
-generated = 0;
+generated = 1;
 
 while generated < num_samples   
     %Pick a random image
-    image_file =  image_files(floor(rand(1) * num_images + 1));
+    image_index =  floor(rand(1) * num_images + 1);
+    %make sure we get at least one sample from each image
+    if generated < num_images
+        image_index = generated;
+    end
+    
+    image_file = image_files(image_index);
     
     path = strcat(non_face_scn_path, '/', image_file.name);
     image = rgb2gray(imread(path));
@@ -58,7 +64,7 @@ while generated < num_samples
         continue
     end
     
-    hog = vl_hog(single(image), feature_params.hog_cell_size);
+    hog = vl_hog(single(image)/255.0, feature_params.hog_cell_size);
     
     hog_size = size(hog);
     hog_height = hog_size(1);
@@ -80,9 +86,9 @@ while generated < num_samples
         feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1,:);
         feature = reshape(feature, 1, []);
         
+        features_neg(generated, :) = feature(1, :);
         %keep track of how many images we've generated
-        generated = generated + 1;
-        features_neg(generated, :) = feature(1, :);        
+        generated = generated + 1;        
     end
     disp(generated/num_samples);
 end
