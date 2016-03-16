@@ -67,6 +67,7 @@ feature_params = struct('template_size', 36, 'hog_cell_size', 6);
 
 features_pos = get_positive_features( train_path_pos, feature_params );
 features_neg = get_random_negative_features( non_face_scn_path, feature_params, num_negative_examples);
+features_hard_neg = get_hard_negatives(hard_negative_path, feature_params);
 
     
 %% step 2. Train Classifier
@@ -81,11 +82,11 @@ features_neg = get_random_negative_features( non_face_scn_path, feature_params, 
 
 %we need the number of positive samples, so we know how many 1's we should
 %output
-y = [-ones(1, num_negative_examples), ones(1, size(features_pos, 1))];
+y = [-ones(1, num_negative_examples), -ones(1, size(features_hard_neg, 1)), ones(1, size(features_pos, 1))];
 
 %This should have one column per sample. It should be a 1116xNUM_SAMPLES
 %vector
-x = [transpose(features_neg), transpose(features_pos)];
+x = [transpose(features_neg), transpose(features_hard_neg), transpose(features_pos)];
 [w, b] = vl_svmtrain(x, y, 0.0001) ;
 
 %% step 3. Examine learned classifier
@@ -156,7 +157,7 @@ imwrite(hog_template_image, 'visualizations/hog_template.png')
     evaluate_detections(bboxes, confidences, image_ids, label_path);
 
 %Save all the negatives we encountered
-extract_hard_negatives(hard_negative_path, test_scn_path, image_ids, bboxes, fp);
+extract_hard_negatives(hard_negative_path, test_scn_path, image_ids, bboxes, fp, feature_params);
 
 visualize_detections_by_image(bboxes, confidences, image_ids, tp, fp, test_scn_path, label_path)
 % visualize_detections_by_image_no_gt(bboxes, confidences, image_ids, test_scn_path)
