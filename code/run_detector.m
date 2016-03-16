@@ -50,7 +50,7 @@ image_ids = cell(0,1);
 %than 1
 scale_multiplier = 0.7;
 
-min_confidence_threshold = 0.1;
+min_confidence_threshold = -0.4;
 window_size = feature_params.template_size/feature_params.hog_cell_size;
 
 for i = 1:length(test_scenes)

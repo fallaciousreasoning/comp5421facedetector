@@ -15,7 +15,7 @@ end
 function save_false_positive(path_out, path_in, file_name, result, template_size)    
     in_name = char(strcat(path_in, '\', file_name));
     out_name = char(strcat(path_out, '\', file_name));
-    [path_out,file_name,ext] = fileparts(out_name) 
+    [path_out,file_name,ext] = fileparts(out_name);
     
     image = imread(in_name);
     image_size = size(image);
@@ -26,7 +26,7 @@ function save_false_positive(path_out, path_in, file_name, result, template_size
     result(3) = min(result(3), image_size(2));
     
     windowed_image = image(result(2):result(4), result(1):result(3));
-    image_size = size(windowed_image, 1);
+    image_size = min(size(windowed_image, 1), size(windowed_image, 2));
     scale = template_size/image_size;
     windowed_image = imresize(windowed_image, scale(1));
     
