@@ -67,7 +67,7 @@ feature_params = struct('template_size', 36, 'hog_cell_size', 6);
 
 features_pos = get_positive_features( train_path_pos, feature_params );
 features_neg = get_random_negative_features( non_face_scn_path, feature_params, num_negative_examples);
-features_hard_neg = zeros(0, 1116);get_hard_negatives(hard_negative_path, feature_params);
+features_hard_neg = zeros(0, 1116);%get_hard_negatives(hard_negative_path, feature_params);
 
     
 %% step 2. Train Classifier
