@@ -1,2 +1,5 @@
 *.asv
 /code/visualizations/*
+/data/test_buildings
+/data/positive_buildings
+/data/negative_buildings
