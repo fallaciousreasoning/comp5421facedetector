@@ -25,84 +25,521 @@
 <h2>COMP 5421 / Project 2 / Face Detection with a Sliding Window</h2>
 
 <div style="float: right; padding: 20px">
-<img src="images/hog_6_threshold_-0.4_hard_neg_smalldata_argentina.png" width="400px"/>
-<p style="font-size: 14px">Example of face detection on a photo of the Argentinian football team.</p>
+	<img src="images/hog_6_threshold_-0.4_hard_neg_smalldata_argentina.png" width="400px"/>
+	<p style="font-size: 14px">Example of face detection on a photo of the Argentinian football team.</p>
 </div>
 
 <h3>Overview</h3>
 <p>
-    The goal of this project was to detect faces from random scenes. To aid us in this end, we were given
-    a database of positive and negative images on which to train an SVM, alongside a collection of test
-    scenes, in which faces had been labelled manually by earlier researchers. You can see the code <a href="https://bitbucket.org/fallaciousreasoning/facedetector/overview">here</a>
+    The goal of this project was to detect faces from random scenes. To aid us in this end, we were given a database of positive and negative images on which to train an SVM, alongside a collection of test scenes, in which faces had been labelled manually by earlier researchers. You can see the code <a href="https://bitbucket.org/fallaciousreasoning/facedetector/overview">here</a>.
 </p>
 
 <h3>Approach</h3>
+<p>
+	The program can be broadly broken down into the following phases:
+</p>
 <ol>
-<li>list element 1.</li>
-<li>list element 2.</li>
-<li>etc.</li>
+	<li>Load Positive Examples</li>
+	<li>Load Random Negative Examples</li>
+	<li>Train Classifier</li>
+	<li>Run Detector</li>
 </ol>
 
-<p> 	Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<h4>Loading Positive Examples</h4>
+<p>
+	The first step of the program is to load positive images and convert them to their HoG representation. The program is told which directory to load the positive samples from and opens every image file in that directory. It is assumed that all positive images are 36x36. HoG representations are calculated using the <a href="http://www.vlfeat.org/overview/hog.html">vl_hog</a> method.
+</p>
 
-<div style="clear:both">
+<h4>Loading Random Negative Examples</h4>
+<p>
+	Negative samples work similarly to positive examples but with one caveat. We need a large number of negative samples and we need them to be 36x36. To reduce the amount of manual work needed the negatives directory consists of a large number of negative images of arbitrary size. The program takes random 36x36 pixel samples from these negative images and converts them to their HoG representation.
+</p>
+
+<h4>Training the Classifier</h4>
+<p>
+	These positive and negative examples are fed into the classifier, along with the expected outputs (-1 for negative images and 1 for positive images). I encountered some problems here, as I was not entirely clear on the input format that <a href="http://www.vlfeat.org/sandbox/matlab/vl_svmtrain.html">vl_svmtrain</a> method expected, so I was forced to consult the documentation.
+</p>
+
+<p>
+	vl_svmtrain expects three input arguments which are helpfully named x, y and lambda. x is the training data and should be a matrix where each column represents an example with the rows being the features within the vector. y is a vector of the expected results -1 for negative and +1 for positive. lambda is a parameter specific to the SVM, after trying several different values I settled on 0.0001, as it seemed to produce the best results.
+</p>
+
+<h4>Running the Detector</h4>
+<p>
+	At a conceptual level the detector is very simple. A window, the same size as the training samples should be moved along the image varying scale until the window is bigger than the test image. At each position the window should be evaluated by the SVM to determine whether or not it contains a face.
+</p>
+
+<p>
+	In practice, however there are a large number of things that can go wrong at this stage. For example, the detector will often detect the same faces multiple times. To remedy this, non-maximum suppression is run on the detected faces, which essentially means for a group of overlapping detections we only take the biggest detection (and only one). I also immediately discard any windows that the classifier says are faces with less than 0 confidence.
+</p>
+
+<p>
+	In my particular implementation I move the window across the image one HoG cell at a time and upscale the window by 70% each time the window moves completely across the image.
+</p>
+
+<p>
+	I actually ran into an interesting problem while trying to get multi-scale detections working. My multi-scale detector was getting a lower average accuracy than my fixed-size detector. After several hours trying to diagnose what was going wrong in my detector I realised I was failing to upscale the size of my detected window, to compensate for the smaller input image, so the detector was working correctly, I was just outputting the incorrect results.
+</p>
+
+<h3>Results</h3>
+<p>
+	My results were typically in line with what was suggested at the bottom of the assignment, 0.8 for HoG cell size 6, 0.89 for HoG cell size 4 and 0.9 for HoG cell size 3. For almost all of my testing I used a cell size of 6, as the smaller cell sizes made testing on my laptop painfully slow.
+</p>
+<h4>Learned Histograms of Gradients</h4>
+<table border=1>
+	<tr>
+		<td>
+			HoG CellSize: 6
+		</td>
+		<td>
+			HoG CellSize: 4
+		</td>
+		<td>HoG CellSize: 3</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6.png" width="400"/>
+		<td>
+			<img src="images/hog_4.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/hog_3.png"  width="400"/>
+		</td>
+	</tr>
+</table>
+<p>
+	As is apparent in the table decreasing the cell size makes for a more accurate representation of a face. However, this is offset significantly by the cost in performance. For my purposes in this assignment, a cell size of 6 was more than adequate.
+</p>
+
+<h4>Results at Different Cell Sizes</h4>
+<table border=1>
+	<tr>
+		<td>
+			HoG CellSize: 6
+		</td>
+		<td>
+			HoG CellSize: 4
+		</td>
+		<td>HoG CellSize: 3</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_0_argentina.png" width="400"/>
+		<td>
+			<img src="images/hog_4_threshold_0_argentina.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/hog_3_threshold_0_argentina.png"  width="400"/>
+		</td>
+	</tr>
+		<tr>
+		<td>
+			<img src="images/hog_6_threshold_0_arsenal.png" width="400"/>
+		<td>
+			<img src="images/hog_4_threshold_0_arsenal.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/hog_3_threshold_0_arsenal.png"  width="400"/>
+		</td>
+	</tr>
+		<tr>
+		<td>
+			<img src="images/hog_6_threshold_0_baldy.png" width="400"/>
+		<td>
+			<img src="images/hog_4_threshold_0_baldy.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/hog_3_threshold_0_baldy.png"  width="400"/>
+		</td>
+	</tr>
+</table>
+<p>
+	In these three images, the classifier performs similarly with different cell sizes, though the detectors with smaller cells do tend to pick up more false positives. However, this is to be expected, as the detector is running through a far larger number of windows. An interesting extension to this project could be to have the detectors use the same step size with these different cell sizes (so the detectors run at similar speeds and compare the same number of windows) and see what effect that has on the detection rate.
+</p>
+
+<h4>Average Precisions</h4>
+<table border=1>
+	<tr>
+		<td>
+			HoG CellSize: 6
+		</td>
+		<td>
+			HoG CellSize: 4
+		</td>
+		<td>HoG CellSize: 3</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_average_precision.png" width="400"/>
+		<td>
+			<img src="images/hog_4_average_precision.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/hog_3_average_precision.png"  width="400"/>
+		</td>
+	</tr>
+</table>
+<p>
+	As expected, the average precision increases as you reduce the cell size, result in more windows being examined and having a higher number of features to base predictions on. My accuracy increased further by decreasing the size of the scale step to 0.9, however, this slowed the algorithm down even further.
+</p>
+
+<h4>Reducing the Confidence Threshold</h4>
+<p>
+	Early on, I was getting a lot of false positives, so I set a confidence threshold of 0.0, which significantly reduced these at the cost of some of the true positives. Later, I played with moving this down to -0.4, which reinforced my decision.
+</p>
+
+<table border=1>
+	<tr>
+		<td>
+			Threshold 0
+		</td>
+		<td>
+			Threshold -4
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_average_precision.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_average_precision.png" width="400"/>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_0_argentina.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_argentina.png" width="400"/>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_0_arsenal.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_arsenal.png" width="400"/>
+		</td>
+	</tr>
+</table>
+<p>
+	As you can see, although the average precision is markedly similar the detector with a threshold of -0.4 gets significantly more false positives.
+</p>
+
 <h3>Of Particular Note</h3>
 
-<p> 	Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p> 	
+	While debugging the detector I found it convenient to use only a subset of the positive and negative images, to speed up testing. Interestingly, the effect this had on the accuracy of the detector was far less than expected, especially when making use of hard negative mining (see below).
+</p>
 
-<h3>Algorithm Overview</h3>
-The javascript in the <code>highlighting</code> folder is configured to do syntax highlighting in code blocks such as the one below.<p>
-
-<pre><code>
-%example code
-for i = 1:length(offset)
-    source = imread(sprintf('%s/source_%02d.jpg',data_dir,i));
-    mask   = imread(sprintf('%s/mask_%02d.jpg',data_dir,i));
-    target = imread(sprintf('%s/target_%02d.jpg',data_dir,i));
-
-</code></pre>
-
-<h3>Extra Features</h3>
-<h4>Hard Negative Mining</h4>
-<h4>Custom HOG Implementation</h4>
 <table border=1>
-<tr>
-<td>
-<img src="placeholder.jpg" width="24%"/>
-<img src="placeholder.jpg"  width="24%"/>
-<img src="placeholder.jpg" width="24%"/>
-<img src="placeholder.jpg" width="24%"/>
-</td>
-</tr>
+	<th>
+		<td>
+			Full Dataset
+		</td>
+		<td>
+			Small Dataset
+		</td>
+	</th>
+	<tr>
+		<td>
+			Without Hard Negatives
+		</td>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_average_precision.png" width="500"/>
+		</td>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_smalldata_average_precision.png"  width="500"/>
+		</td>
+	</tr>
 
-<tr>
-<td>
-<img src="placeholder.jpg" width="24%"/>
-<img src="placeholder.jpg"  width="24%"/>
-<img src="placeholder.jpg" width="24%"/>
-<img src="placeholder.jpg" width="24%"/>
-</td>
-</tr>
+	<tr>
+		<td>With Hard Negatives</td>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_average_precision_hard_neg.png" width="500"/>
+		</td>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_hard_neg_smalldata_average_precision.png"  width="500"/>
+		</td>
+	</tr>
 
 </table>
 
-<center>
+<h3>Bonus Features</h3>
+<h4>Hard Negative Mining</h4>
 <p>
-Face template HoG visualization for the starter code. This is completely random, but it should actually look like a face once you train a reasonable classifier.
-<p>
-<img src="hog_template.png">
-<p>
-Precision Recall curve for the starter code.
-<p>
-<img src="average_precision.png">
-<p>
-Example of detection on the test set from the starter code.
-<img src="detections_Argentina.jpg.png">
+	One of the bonus features I decided to implement was hard negative mining. Hard Negative mining is essentially where you feed back your false positives (they are considered 'hard' as they look sort of like faces) into your program, using them as part of your training data. I found this to have not insignificant impacts on the average precision of the classifier, and it greatly reduced the number of false positives that were encountered. I ran this with a confidence threshold of -0.4, as I found that the algorithm would often miss real faces after including hard negatives.
+</p>
+<table border=1>
+	<tr>
+		<td>
+			Without Hard Negatives
+		</td>
+		<td>
+			With Hard Negatives
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_average_precision.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_average_precision_hard_neg.png" width="400"/>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_argentina.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_hard_neg_argentina.png" width="400"/>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_arsenal.png" width="400"/>
+		<td>
+			<img src="images/hog_6_threshold_-0.4_hard_neg_arsenal.png" width="400"/>
+		</td>
+	</tr>
+</table>
 
-</center>
+<p>
+	The impact of hard negatives is particularly emphasised in some of the extra scenes, as the yellow boxes don't get in the way. Again, both with and without hard negatives the classifier finds most of the faces, the hard negative mining just greatly reduces the number of false positives.
+</p>
 
-<div style="clear:both" >
-<p> 	Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<table border=1>
+	<tr>
+		<td>
+			Without Hard Negatives
+		</td>
+		<td>
+			With Hard Negatives
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/extra_scenes_1.png" width="400"/>
+		</td>
+		<td>
+			<img src="images/extra_scenes_1_hardneg.png" width="400"/>
+		</td>
+	</tr>
+</table>
+
+<h4>Different Object Categories</h4>
+<p>
+	Over summer, I did some work for a software company in New Zealand detecting buildings from satellite photographs. I decided to see how well this detector translated to those images, as I retained access to a lot of the images from that period and I had put them in a similar format.
+</p>
+
+<p>
+	The database of images I compiled over summer consisted of 10,000 24x24 positive images and 1600 negative ones, of varying size. So getting the detector to run on these images was as trivial as changing the location to search to positives and negatives. As the images were considerably smaller, I set the HoG cell size to 3, to get the most detail in the images. However, even with this greater detail, the model did not perform as well. Below is the learned HoG for buildings:
+</p>
+
+<img src="images/building_hog.png" width="400"></img>
+
+<p>
+	The HoG shown above seems to indicate that the model has learned well what the average building looks like. However, the results were significantly less promising.
+</p>
+
+<table border=1>
+	<tr>
+		<td>
+			<img src="images/building_1.png" width="800"></img>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<img src="images/building_2.png" width="800"></img>
+		</td>
+	</tr>
+</table>
+
+<p>
+	As you can see, the number of false positives is very high, rendering the model almost unusable. Not only this, but in the second image the model has even failed to detect most of the buildings. These results actually use a confidence threshold of 2, as lower thresholds have an even higher number of false positives. 
+</p>
+
+<p>
+	My best theory as to why this model is so much less accurate than the faces classifier is a comes down to a combination of reasons. Firstly, the data that the classifier was trained on has a lower resolution than the face images, so the classifier began with a far fewer number of features to work with, though I tried to offset this by decreasing the size of the HoG cells. Secondly, buildings are inherently more variant in shape than faces (most of which are round), so the classifier has to recognize a much broader set of objects. I believe this is shown in the learned HoG, where it has learned a simple box shape, which fails to account for the more complicated shapes that a building might take on. When the more complicated feature space is combined with less detailed training data I am honestly surprised the model worked as well as it did.
+</p>
+
+<p>
+	Despite this poor performance on the test images, the model seemed to work well on the training set, comparable to the performance of the face detector on its training data, having almost perfect accuracy. However, this has almost no reflection on the accuracy of the model itself, and could be a result of over fitting the model to the training data.
+</p>
+
+<img src="images/building_detector_training_performance.PNG" width="400"></img>
+
+<p>
+	If it is of any interest, the models I attempted to use over summer were a Haar Cascade classifier and a neural net on the same data, both of which performed better than this linear SVM on HoG's. However, I encountered similar problems in that I would get a large number of false positives, though the rate of true positives was significantly better. That said, these models took far longer to train, with the Haar Cascade working over almost a day and the neural net taking about 15 minutes.
+</p>
+
+<div style="clear:both">
+
+<h3>Algorithm Overview</h3>
+<p>
+	To finish this report, here is the code doing most of the work
+</p>
+
+<h4>Loading Positives</h4>
+<pre>
+	<code>
+		%In the get_positive_features function
+		for i = 1:num_images
+		    path = strcat(train_path_pos, '/', image_files(i).name);
+		    image = imread(path);
+		        
+		    hog = vl_hog(single(image)/255.0, feature_params.hog_cell_size);
+		    hog_size = size(hog);
+		    hog_height = hog_size(1);
+		    hog_width = hog_size(2);
+		    
+		    feature = reshape(hog, 1, []);
+		    features_pos(i, :) = feature(1, :);
+		    disp(i/num_images);
+		end
+	</code>
+</pre>
+
+<h4>Loading Random Negatives</h4>
+<pre>
+	<code>
+		%In the get_random_negative_features function
+		while generated < num_samples   
+		    %Pick a random image
+		    image_index =  floor(rand(1) * num_images + 1);
+		    %make sure we get at least one sample from each image
+		    if generated < num_images
+		        image_index = generated;
+		    end
+		    
+		    image_file = image_files(image_index);
+		    
+		    path = strcat(non_face_scn_path, '/', image_file.name);
+		    image = rgb2gray(imread(path));
+		    
+		    image_size = size(image);
+		    height = image_size(1);
+		    width = image_size(2);
+		    
+		    min_dimension = min(width, height);
+		    
+		    if (min_dimension < feature_params.template_size)
+		        continue
+		    end
+		    
+		    hog = vl_hog(single(image)/255.0, feature_params.hog_cell_size);
+		    
+		    hog_size = size(hog);
+		    hog_height = hog_size(1);
+		    hog_width = hog_size(2);
+		    
+		    %Get some random x/y points for the hog
+		    rand_hog_permutation_y = randperm(hog_height-cells_a_template+1);
+		    rand_hog_permutation_x = randperm(hog_width-cells_a_template+1);
+		    min_dimension = min(size(rand_hog_permutation_x, 2), size(rand_hog_permutation_y, 2));
+		    
+		    for j = 1:samples_per_image
+		        if (j > min_dimension || generated >= num_samples)
+		            break
+		        end
+		        
+		        y = rand_hog_permutation_y(j);
+		        x = rand_hog_permutation_x(j);
+		        
+		        feature = hog(y:y + cells_a_template - 1, x:x + cells_a_template - 1,:);
+		        feature = reshape(feature, 1, []);
+		        
+		        features_neg(generated, :) = feature(1, :);
+		        %keep track of how many images we've generated
+		        generated = generated + 1;        
+		    end
+		    disp(generated/num_samples);
+		end
+	</code>
+</pre>
+
+<h4>Training the classifier</h4>
+<pre>
+	<code>
+		%we need the number of positive samples, so we know how many 1's we should output
+		y = [-ones(1, num_negative_examples), -ones(1, size(features_hard_neg, 1)), ones(1, size(features_pos, 1))];
+
+		%This should have one column per sample. It should be a 1116xNUM_SAMPLES
+		%vector
+		x = [transpose(features_neg), transpose(features_hard_neg), transpose(features_pos)];
+		[w, b] = vl_svmtrain(x, y, 0.0001) ;
+	</code>
+</pre>
+
+<h4>Running the Detector</h4>
+<pre>
+	<code>
+		%initialize these as empty and incrementally expand them.
+		bboxes = zeros(0,4);
+		confidences = zeros(0,1);
+		image_ids = cell(0,1);
+		   
+		%The amount to downscale the image by each iteration. this should be less
+		%than 1
+		scale_multiplier = 0.7;
+
+		min_confidence_threshold = -0.0;
+		window_size = feature_params.template_size/feature_params.hog_cell_size;
+
+		for i = 1:length(test_scenes)
+		    count=0;
+		    fprintf('Detecting faces in %s\n', test_scenes(i).name)
+		    img = imread( fullfile( test_scn_path, test_scenes(i).name ));
+		    img = single(img)/255;
+		    img_min_dimension = min(size(img, 1), size(img, 2));
+		    
+		    if(size(img,3) > 1)
+		        img = rgb2gray(img);
+		    end
+		    
+		    %Run the sliding window detector
+		    cur_bboxes = zeros(0, 4);
+		    cur_confidences = zeros(0, 1); 
+		    cur_image_ids = zeros(0, 1);
+		    
+		    scale = 1;
+		    while floor(scale * img_min_dimension/feature_params.hog_cell_size) > window_size 
+		        scaled_image = imresize(img, scale);
+		        scaled_hog = vl_hog(scaled_image, feature_params.hog_cell_size);
+		        width = size(scaled_hog, 2);
+		        height = size(scaled_hog, 1);
+		        
+		        for x = 1:1:width - window_size + 1
+		            for y = 1:1:height - window_size + 1
+		                feature = scaled_hog(y:y+ window_size - 1, x:x + window_size - 1, :);
+		                score = reshape(feature, 1, [])*w + b;
+		                
+		                if score > min_confidence_threshold
+		                    bbox = [x, y, x + window_size, y + window_size] * feature_params.hog_cell_size / scale;
+		                    
+		                    cur_bboxes = [cur_bboxes; bbox];
+		                    cur_confidences = [cur_confidences; score];
+		                    cur_image_ids = [cur_image_ids; {test_scenes(i).name}];
+		                end
+		            end
+		        end
+		        
+		        scale = scale * scale_multiplier;  
+		    end
+		    
+		    %non_max_supr_bbox can actually get somewhat slow with thousands of
+		    %initial detections. You could pre-filter the detections by confidence,
+		    %e.g. a detection with confidence -1.1 will probably never be
+		    %meaningful. You probably _don't_ want to threshold at 0.0, though. You
+		    %can get higher recall with a lower threshold. You don't need to modify
+		    %anything in non_max_supr_bbox, but you can.
+		    [is_maximum] = non_max_supr_bbox(cur_bboxes, cur_confidences, size(img));
+
+		    cur_confidences = cur_confidences(is_maximum,:);
+		    cur_bboxes      = cur_bboxes(     is_maximum,:);
+		    cur_image_ids   = cur_image_ids(  is_maximum,:);
+		 
+		    bboxes      = [bboxes;      cur_bboxes];
+		    confidences = [confidences; cur_confidences];
+		    image_ids   = [image_ids;   cur_image_ids];
+		end
+	</code>
+</pre>
 </div>
 </body>
 </html>
