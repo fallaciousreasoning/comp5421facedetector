@@ -42,11 +42,11 @@ run('vlfeat/toolbox/vl_setup')
 [~,~,~] = mkdir('visualizations');
 
 data_path = '../data/'; %change if you want to work with a network copy
-positive_folder = 'small_positive'; %'caltech_faces/Caltech_CropFaces';
-negative_folder = 'small_negative'; %'train_non_face_scenes';
+positive_folder = 'caltech_faces/Caltech_CropFaces';
+negative_folder = 'train_non_face_scenes';
 hard_negative_folder = 'hard_negatives';
 
-num_negative_examples = 200; %10000;%Higher will work strictly better, but you should start with 10000 for debugging
+num_negative_examples = 10000;%Higher will work strictly better, but you should start with 10000 for debugging
 
 train_path_pos = fullfile(data_path, positive_folder); %Positive training examples. 36x36 head crops
 hard_negative_path = fullfile(data_path, hard_negative_folder);
